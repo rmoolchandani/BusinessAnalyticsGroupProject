@@ -1,0 +1,284 @@
+---
+title: "Group Project"
+author: "Khushboo Yadav, Rahkee Moolchandani, Mayank Pugalia, Mark Bruner"
+date: "11/16/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+```{r}
+rm(list=ls())
+```
+
+
+```{r, echo=FALSE}
+library(fastDummies)
+library(modeldata)
+library(tidyverse)
+library(corrplot)
+library(caret)
+library(ggcorrplot)
+library(pscl)
+library(broom)
+```
+
+
+```{r}
+# Creating new variable names for the datasets we will use for this assignment.
+data(mlc_churn)
+cust <- mlc_churn
+
+load("Customers_To_Predict.RData")
+test <- data.frame(Custmers_to_predict)
+```
+## Making Life Easier with Variable Names
+```{r}
+# Renamed variables to make it easier to work with. 
+cust$area_code <- as.factor(sub("area_code_", "", cust$area_code))
+cust %>% 
+  rename(
+    acct_length = account_length, 
+    intl_plan = international_plan, 
+    vm_plan = voice_mail_plan, 
+    num_vm_mess = number_vmail_messages, 
+    tot_day_min = total_day_minutes, 
+    tot_day_calls = total_day_calls, 
+    tot_day_chg = total_day_charge, 
+    tot_eve_min = total_eve_minutes, 
+    tot_eve_calls = total_eve_calls, 
+    tot_night_min = total_night_minutes, 
+    tot_night_calls = total_night_calls, 
+    tot_night_chg = total_night_charge, 
+    tot_intl_min = total_intl_minutes, 
+    tot_intl_calls = total_intl_calls, 
+    tot_intl_chg = total_intl_charge, 
+    num_cust_serv_calls = number_customer_service_calls
+    ) -> cust
+cust
+```
+
+
+```{r}
+# The types in the dataset all look good but will have to create some dummy variables. Will do that next.  Data also is complete with no missing variables and just looking at the beginning and end of each variable nothing seems to be cleaned up.
+str(cust)
+tail(cust)
+
+colMeans(is.na(cust))
+
+summary(cust)
+```
+
+
+```{r}
+# Creating dummy variables for area_code, intl_plan, vm_plan, and churn to separate each of the factors to be included in the logistic regression model.
+cust %>% 
+dummy_cols(c("area_code", 
+             "intl_plan", 
+             "vm_plan", 
+             "churn"), 
+           remove_selected_columns = TRUE) -> cust
+
+cust <- cust[, c(-20, -22, -25)]
+
+cust[, 17:22] <- lapply(cust[, 17:22], factor) 
+```
+
+```{r}
+# May be a few outliers but, to be honest, nothing seems so extreme that I think it is worth changing. Most of the variables seem fairly normally distributed and no significant extremes that I can tell.
+boxplot(cust[, 2:22])
+
+cust %>% 
+  filter(tot_day_calls < 1)
+```
+
+```{r}
+cust[2:16] %>% 
+  gather(key = Variable, value = Value) %>% 
+  ggplot() +
+    geom_histogram(aes(x = Value), fill = "steelblue") +
+    facet_wrap(~Variable, scales='free') +
+    theme_classic() +
+    theme(aspect.ratio = 0.5, axis.title = element_blank(), panel.grid = element_blank())
+```
+
+
+```{r}
+cust %>% 
+  filter(churn_yes == 1) %>%
+  ggplot(mapping = aes(x = num_cust_serv_calls)) +
+  geom_histogram(aes(fill = "steelblue"), binwidth = 1)
+
+cust %>% 
+  count(churn_yes)
+
+ cust %>% 
+  filter(churn_yes == 1 & num_cust_serv_calls >= 1 & num_cust_serv_calls <= 4)%>% 
+  summarise("% churned after making betw 1 and 4 cust service calls" = n()/707*100)
+
+ cust %>% 
+  filter(churn_yes== 1) -> churn_cust
+ 
+ cust %>% 
+  filter(churn_yes== 1) %>%
+  ggplot(mapping = aes(x = intl_plan_yes)) +
+  geom_histogram(aes(fill = churn_yes), stat = "count")
+```
+
+Most customers churn when they make 1 to 3 customer service calls. Also, about 30% of customers churn if they have a international plan.  
+
+```{r}
+cor(churn_cust[, 2:16]) -> cc
+ggcorrplot(cc, method = "circle", type = "lower", ggtheme = ggplot2::theme_classic)
+```
+
+Some positive correlation between number of customer service calls and total day charges also total day minutes. Actually, most of the variables have some positive correlation to customer service calls except total day calls, total evening calls, account length, and total night calls. 
+
+```{r}
+churn_cust %>% 
+  ggplot(mapping = aes(x = tot_day_calls)) +
+  geom_histogram(aes(fill = churn_yes))
+```
+
+Most of the people seem to churn between 75 to 125 calls per day.
+
+```{r}
+churn_cust %>% 
+  ggplot(mapping = aes(x = tot_day_chg)) +
+  geom_histogram(aes(fill = churn_yes))
+```
+
+Most people churn when charges are between 20 to 50 per day.
+
+Based on the above, I might suggest that the reason people are churning is that the cost of daily phone call charages during the day are too much. FYI I think this data is really old as I remember when Cell Phone companies used to charge more for calls made during the day than the evening... 
+
+```{r}
+# Partioning the dataset into train and validation sets.
+set.seed(15)
+tra_val <- createDataPartition(cust$churn_yes, list = FALSE, p = .8)
+train <- cust[tra_val, ]
+valid <- cust[-tra_val, ]
+```
+
+```{r}
+norm <- preProcess(train, method = c("scale", "center"))
+train <- predict(norm, train)
+
+summary(train)
+```
+
+```{r}
+# Creating a model for logistic regression based upon all the variables. I will create another logistic regression model to compare it.
+model1 <- glm(churn_yes~., family = "binomial", data = train)
+summary(model1)
+
+varImp(model1)
+```
+
+
+```{r}
+# I ran a grid search algorithm and the best AIC model was the one below. 
+model3 <- glm(churn_yes ~ acct_length + num_vm_mess + tot_day_min + tot_day_calls + 
+    tot_day_chg + tot_eve_min + total_eve_charge + tot_night_min + 
+    tot_night_chg + tot_intl_min + tot_intl_calls + tot_intl_chg + 
+    num_cust_serv_calls + area_code_415 + intl_plan_yes + vm_plan_yes + 
+    tot_day_min:num_cust_serv_calls + tot_day_min:tot_day_chg + 
+    tot_intl_min:intl_plan_yes + tot_eve_min:num_cust_serv_calls + 
+    tot_day_min:vm_plan_yes + tot_day_min:tot_eve_min + tot_day_chg:tot_night_min + 
+    tot_intl_calls:intl_plan_yes + tot_day_chg:intl_plan_yes + 
+    tot_eve_min:vm_plan_yes + num_cust_serv_calls:intl_plan_yes + 
+    tot_night_chg:vm_plan_yes + tot_night_min:num_cust_serv_calls + 
+    acct_length:num_vm_mess + total_eve_charge:tot_night_min + 
+    tot_intl_min:tot_intl_calls + num_cust_serv_calls:vm_plan_yes + 
+    tot_day_calls:total_eve_charge + tot_night_min:vm_plan_yes + 
+    total_eve_charge:num_cust_serv_calls + intl_plan_yes:vm_plan_yes + 
+    num_vm_mess:area_code_415 + tot_eve_min:total_eve_charge + 
+    tot_intl_chg:num_cust_serv_calls + tot_day_calls:num_cust_serv_calls + 
+    tot_day_chg:num_cust_serv_calls + tot_intl_calls:vm_plan_yes + 
+    tot_eve_min:tot_night_chg + tot_day_min:tot_night_chg + acct_length:tot_night_chg + 
+    acct_length:tot_night_min + tot_intl_calls:num_cust_serv_calls, family = "binomial", data = train)
+
+
+model1 <- glm(churn_yes~., family = "binomial", data = train)
+summary(model1)
+summary(model3) # This model performs well as many of the variables are significant statistically. Also the AIC is 700 less than model 1. Feeling pretty good about it but will run more tests.
+
+anova(model1, model3, test = "Chisq")
+```
+
+
+```{r}
+# A test IIA hypothesis (independence of irrelevant alternatives) for a multinomial logit model. Basically the lower the better.
+list(model1 = pR2(model1)["McFadden"], 
+     model3 = pR2(model3)["McFadden"])
+
+model1_data <- augment(model1) %>% 
+  mutate(index = 1:n())
+
+model3_data <- augment(model1) %>% 
+  mutate(index = 1:n())
+
+model1_data %>%  # Used to estimate the influence of a data point when performing a least-squares regression analysis. Interestingly the top 5 for model1 and model3 are the same...
+  filter(abs(.std.resid) > 3)
+
+plot(model1, which = 4, id.n = 5)
+
+model1_data %>% 
+  top_n(5, .cooksd)
+```
+
+
+```{r}
+# Now checking how well the models perform on the validation set. 
+valid <- predict(norm, valid)
+
+test_m1 <- predict(model1, newdata = valid, type = "response")
+test_m3 <- predict(model3, newdata = valid, type = "response")
+
+
+
+list(
+  model1 = table(valid$churn_yes, test_m1 > 0.5) %>% 
+    prop.table() %>% 
+    round(3),
+  model3 = table(valid$churn_yes, test_m3 > 0.5) %>% 
+    prop.table() %>% 
+    round(3)
+)
+```
+
+```{r}
+table(valid$churn_yes, test_m1 > .5)
+table(valid$churn_yes, test_m3 > .5)
+```
+
+## ROC AND AUC
+```{r}
+library(ROCR)
+
+par(mfrow=c(1, 2))
+
+prediction(test_m1, valid$churn_yes) %>%
+  performance(measure = "tpr", x.measure = "fpr") %>%
+  plot()
+
+prediction(test_m3, valid$churn_yes) %>%
+  performance(measure = "tpr", x.measure = "fpr") %>%
+  plot()
+
+
+# model 2 AUC
+prediction(test_m1, valid$churn_yes) %>%
+  performance(measure = "auc") %>%
+  .@y.values
+
+# model 2 AUC
+prediction(test_m3, valid$churn_yes) %>%
+  performance(measure = "auc") %>%
+  .@y.values
+```
+
+
+
+
+
+`
