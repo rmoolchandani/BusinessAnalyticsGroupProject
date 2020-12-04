@@ -31,6 +31,7 @@ cust <- mlc_churn
 load("Customers_To_Predict.RData")
 test <- data.frame(Custmers_to_predict)
 ```
+
 ## Making Life Easier with Variable Names
 ```{r}
 # Renamed variables to make it easier to work with. 
@@ -56,7 +57,6 @@ cust %>%
     ) -> cust
 cust
 ```
-
 
 ```{r}
 # The types in the dataset all look good but will have to create some dummy variables. Will do that next.  Data also is complete with no missing variables and just looking at the beginning and end of each variable nothing seems to be cleaned up.
@@ -207,7 +207,7 @@ anova(model1, model3, test = "Chisq")
 
 
 ```{r}
-# A test IIA hypothesis (independence of irrelevant alternatives) for a multinomial logit model. Basically the lower the better.
+# A test IIA hypothesis (independence of irrelevant alternatives) for a multinomial logit model. Basically the higher the better.
 list(model1 = pR2(model1)["McFadden"], 
      model3 = pR2(model3)["McFadden"])
 
