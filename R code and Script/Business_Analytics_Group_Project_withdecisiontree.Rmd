@@ -7,23 +7,25 @@ output: html_document
 
 ```{r setup, include=FALSE}
 knitr::opts_chunk$set(echo = TRUE)
+
+rm(list=ls()) # This code will clear your environment each time you run all. 
 ```
 
 #### 1.Import Libraries
-```{r}
+```{r, warning = FALSE}
 library(plyr)
 library(ggplot2)
 library(caret)
 library(party)
-install.packages('rpart.plot')
+# install.packages('rpart.plot')
 library(rpart)
 library(rpart.plot)
 ```
 
-#### 2.Reading the dataset 
+#### 2.Reading the dataset  
 ```{r}
-Churn_Train <- read.csv("~/Downloads/Churn_Train(1).csv")
-load("~/Downloads/Customers_To_Predict(1).RData")
+Churn_Train <- read.csv("Churn_Train.csv") 
+load("Customers_To_Predict.RData")
 summary(Churn_Train)
 ```
 # analysing count of NA value in the dataset
@@ -31,12 +33,36 @@ summary(Churn_Train)
 sapply(Churn_Train, function(x) sum(is.na(x))) # NA data
 sapply(Customers_To_Predict,function(x) sum(is.na(x))) # no NA data
 ```
+
+## Exploratory Data Analysis
+```{r}
+Churn_Train %>% 
+  filter(churn_yes == 1) %>%
+  ggplot(mapping = aes(x = num_cust_serv_calls)) +
+  geom_histogram(aes(fill = "steelblue"), binwidth = 1)
+
+Churn_Train %>% 
+  count(churn_yes)
+
+Churn_Train %>% 
+  filter(churn_yes == 1 & num_cust_serv_calls >= 1 & num_cust_serv_calls <= 4)%>% 
+  summarise("% churned after making betw 1 and 4 cust service calls" = n()/707*100)
+
+Churn_Train %>% 
+  filter(churn_yes== 1) -> churn_cust
+ 
+Churn_Train %>% 
+  filter(churn_yes== 1) %>%
+  ggplot(mapping = aes(x = intl_plan_yes)) +
+  geom_histogram(aes(fill = churn_yes), stat = "count")
+```
+
 #### removing NA values
 ```{r}
 Churn_Train <- na.omit(Churn_Train)
 ```
 
-#Removing state and area codes from the dataset
+# Removing state and area codes from the dataset
 ```{r}
 Churn_Train<-Churn_Train[,-c(1,3)] 
 
