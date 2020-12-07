@@ -11,19 +11,26 @@ knitr::opts_chunk$set(echo = TRUE)
 rm(list=ls()) # This code will clear your environment each time you run all. 
 ```
 
-#### 1.Import Libraries
+#### 1.Import Libraries 
 ```{r, warning = FALSE}
 library(plyr)
 library(ggplot2)
 library(caret)
 library(party)
+# install.packages('ggcorrplot')
+library(ggcorrplot) # for correlations.
+# install.packages('superml')
+library(stats) # for the stepwise search.
 # install.packages('rpart.plot')
 library(rpart)
 library(rpart.plot)
+# fastDummies package is really good for making dummy variables as well.
+# install.packages("fastDummies")
 ```
 
 #### 2.Reading the dataset  
 ```{r}
+setwd("~/Documents/BusinessAnalyticsGroupProject/R code and Script") # I put the datasets in the folder that Khushboo created so we could all easily add our code. This code should set your workspace to the folder with the datasets.
 Churn_Train <- read.csv("Churn_Train.csv") 
 load("Customers_To_Predict.RData")
 summary(Churn_Train)
@@ -31,31 +38,75 @@ summary(Churn_Train)
 # analysing count of NA value in the dataset
 ```{r}
 sapply(Churn_Train, function(x) sum(is.na(x))) # NA data
-sapply(Customers_To_Predict,function(x) sum(is.na(x))) # no NA data
+sapply(Custmers_to_predict, function(x) sum(is.na(x))) # no NA data
 ```
 
 ## Exploratory Data Analysis
+
 ```{r}
-Churn_Train %>% 
-  filter(churn_yes == 1) %>%
-  ggplot(mapping = aes(x = num_cust_serv_calls)) +
-  geom_histogram(aes(fill = "steelblue"), binwidth = 1)
+# May be a few outliers but, to be honest, nothing seems so extreme that I think it is worth changing. Most of the variables seem fairly normally distributed and no significant extremes that I can tell.
+boxplot(Churn_Train[, 6:19])
+```
+
+
+```{r}
+Churn_Train[6:19] %>% 
+  gather(key = Variable, value = Value) %>% 
+  ggplot() +
+    geom_histogram(aes(x = Value), fill = "steelblue") +
+    facet_wrap(~Variable, scales='free') +
+    theme_classic() +
+    theme(aspect.ratio = 0.5, axis.title = element_blank(), panel.grid = element_blank())
+```
+
+For the continuous variables, most of them are normal in their distributions. Total_eve_minutes may have some outliers as well as total_day_minutes. 
+
+```{r}
+Churn_Train$area_code <- as.factor(sub("area_code_", "", Churn_Train$area_code)) # removed the "area_code_" part of the string in "area_code" variable.
 
 Churn_Train %>% 
-  count(churn_yes)
+  filter(churn == "yes") %>%
+  ggplot(mapping = aes(x = number_customer_service_calls)) +
+  geom_histogram(aes(fill = churn), binwidth = 1) # Showing the number of customer service calls per churned customer.
 
 Churn_Train %>% 
-  filter(churn_yes == 1 & num_cust_serv_calls >= 1 & num_cust_serv_calls <= 4)%>% 
-  summarise("% churned after making betw 1 and 4 cust service calls" = n()/707*100)
+  group_by(churn) %>% 
+  tally(churn == "yes") # total churned in data set.
 
 Churn_Train %>% 
-  filter(churn_yes== 1) -> churn_cust
+  filter(churn == "yes" & number_customer_service_calls >= 1 & number_customer_service_calls <= 4) %>% 
+  tally()/483 # 64% of all the customers who churned made 1 to 4 calls to customer service.
  
 Churn_Train %>% 
-  filter(churn_yes== 1) %>%
-  ggplot(mapping = aes(x = intl_plan_yes)) +
-  geom_histogram(aes(fill = churn_yes), stat = "count")
+  filter(churn == "yes") %>%
+  ggplot(mapping = aes(x = international_plan)) +
+  geom_histogram(aes(fill = churn), stat = "count")
 ```
+
+```{r}
+cor(Churn_Train[, 6:19]) -> cc
+ggcorrplot(cc, method = "circle", type = "lower", ggtheme = theme_classic) # correlation between variables but won't see it until NA's are imputed.
+```
+
+Some positive correlation between number of customer service calls and total day charges also total day minutes. Actually, most of the variables have some positive correlation to customer service calls except total day calls, total evening calls, account length, and total night calls. 
+
+```{r}
+Churn_Train %>% 
+  ggplot(mapping = aes(x = total_day_calls)) +
+  geom_histogram(aes(fill = churn))
+```
+
+Most of the people seem to churn between 75 to 125 calls per day.
+
+```{r}
+Churn_Train %>% 
+  ggplot(mapping = aes(x = total_day_charge)) +
+  geom_histogram(aes(fill = churn))
+```
+
+Most people churn when charges are between 20 to 50 per day.
+
+Based on the above, I might suggest that the reason people are churning is that the cost of daily phone call charages during the day are too much. FYI I think this data is really old as I remember when Cell Phone companies used to charge more for calls made during the day than the evening... 
 
 #### removing NA values
 ```{r}
@@ -67,7 +118,7 @@ Churn_Train <- na.omit(Churn_Train)
 Churn_Train<-Churn_Train[,-c(1,3)] 
 
 
-Customers_To_Predict<-Customers_To_Predict[,-c(1,3)]
+Customers_To_Predict<-Custmers_to_predict[,-c(1,3)]
 ```
 #### data manipulation
 ```{r}
@@ -101,15 +152,41 @@ str(Churn_Train)
 
 ```
 
-##normalization not needed
-```{r}
 
-```
 
 #logistic regression
 ```{r}
 Model_ABC_Wireless <- glm(churn ~ .,family=binomial(link="logit"),data=Churn_Train)
 summary(Model_ABC_Wireless)
+```
+
+### Logistic Regression Model from Stepwise Search
+```{r}
+Model_ABC_Wireless2 <-glm(churn ~ account_length + international_plan + voice_mail_plan + 
+    number_vmail_messages + total_day_minutes + total_day_calls + 
+    total_day_charge + total_eve_charge + total_night_minutes + 
+    total_night_calls + total_night_charge + total_intl_minutes + 
+    total_intl_calls + total_intl_charge + number_customer_service_calls + 
+    total_day_charge:number_customer_service_calls + total_day_charge:total_eve_charge + 
+    voice_mail_plan:total_day_charge + international_plan:total_intl_minutes + 
+    total_day_charge:total_night_charge + international_plan:total_day_charge + 
+    international_plan:number_customer_service_calls + total_eve_charge:number_customer_service_calls + 
+    total_day_calls:total_eve_charge + international_plan:total_intl_calls + 
+    voice_mail_plan:total_night_charge + voice_mail_plan:total_intl_calls + 
+    number_vmail_messages:total_intl_calls + total_day_charge:total_intl_calls + 
+    total_eve_charge:total_intl_calls + number_vmail_messages:total_day_calls + 
+    total_night_calls:total_intl_charge + total_night_minutes:number_customer_service_calls + 
+    voice_mail_plan:total_night_minutes + total_intl_calls:number_customer_service_calls + 
+    total_day_calls:total_day_charge + total_day_calls:number_customer_service_calls + 
+    voice_mail_plan:total_eve_charge + total_intl_minutes:number_customer_service_calls + 
+    total_night_minutes:total_night_charge + account_length:international_plan + 
+    total_night_calls:total_intl_minutes + total_day_minutes:total_day_charge, family = "binomial", data = Churn_Train)
+summary(Model_ABC_Wireless2)
+```
+
+## Stepwise Search for Optimization of Recall
+```{r}
+# step_search <- step(Model_ABC_Wireless, scope = ~.^2, k = 2)
 ```
 
 # Anova
@@ -136,6 +213,44 @@ plot(Customers_To_Predict$Churn,xlab="1= customer likely to churn ,0= customer w
 
 ## 55 customers are likely to churn and 945 are not likely to churn
 ```
+#Prediction
+```{r}
+
+Churn_Prob <- predict(Model_ABC_Wireless, newdata = Customers_To_Predict, type = 'response')
+
+Churn_Probb <- ifelse(Churn_Prob > 0.5,1,0) # Assigning 1 to 0.5 and above  and 0 to 0.5 below
+Customers_To_Predict$Churn<-Churn_Probb # assigning Churn probability to new Column Churn
+
+
+Customers_To_Predict$Churn<-as.factor(Customers_To_Predict$Churn)
+str(Customers_To_Predict)
+
+table(Customers_To_Predict$Churn)
+
+plot(Customers_To_Predict$Churn,xlab="1= customer likely to churn ,0= customer will not churn" , ylab="Customers",main="Prediction of customers who are likely to churn",col="sky blue")
+
+## 55 customers are likely to churn and 945 are not likely to churn
+```
+
+#Prediction
+```{r}
+
+Churn_Prob <- predict(Model_ABC_Wireless2, newdata = Customers_To_Predict, type = 'response')
+
+Churn_Probb <- ifelse(Churn_Prob > 0.5,1,0) # Assigning 1 to 0.5 and above  and 0 to 0.5 below
+Customers_To_Predict$Churn<-Churn_Probb # assigning Churn probability to new Column Churn
+
+
+Customers_To_Predict$Churn<-as.factor(Customers_To_Predict$Churn)
+str(Customers_To_Predict)
+
+table(Customers_To_Predict$Churn)
+
+plot(Customers_To_Predict$Churn,xlab="1= customer likely to churn ,0= customer will not churn" , ylab="Customers",main="Prediction of customers who are likely to churn",col="sky blue")
+
+## 55 customers are likely to churn and 945 are not likely to churn
+```
+
 # decision Tree
 ```{r}
 DC_Tree <- ctree(Churn_Train$churn~ ., Churn_Train)
