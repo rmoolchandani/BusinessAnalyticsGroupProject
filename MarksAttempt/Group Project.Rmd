@@ -204,24 +204,30 @@ summary(model3) # This model performs well as many of the variables are signific
 anova(model1, model3, test = "Chisq")
 ```
 
-
+## Performing Various Tests to Compare Models
 ```{r}
 # A test IIA hypothesis (independence of irrelevant alternatives) for a multinomial logit model. Basically the higher the better.
-list(model1 = pR2(model1)["McFadden"], 
-     model3 = pR2(model3)["McFadden"])
+list(model1 = pR2(Model_ABC_Wireless)["McFadden"], 
+     model3 = pR2(Model_ABC_Wireless2)["McFadden"])
 
-model1_data <- augment(model1) %>% 
+model1_data <- augment(Model_ABC_Wireless) %>% 
   mutate(index = 1:n())
 
-model3_data <- augment(model1) %>% 
+model2_data <- augment(Model_ABC_Wireless2) %>% 
   mutate(index = 1:n())
 
-model1_data %>%  # Used to estimate the influence of a data point when performing a least-squares regression analysis. Interestingly the top 5 for model1 and model3 are the same...
-  filter(abs(.std.resid) > 3)
+model1_data %>%  
+  filter(abs(.std.resid) > 3) # Used to estimate the influence of a data point when performing a least-squares regression analysis. 
+model2_data %>%  
+  filter(abs(.std.resid) > 3) # Used to estimate the influence of a data point when performing a least-squares regression analysis. 
 
-plot(model1, which = 4, id.n = 5)
+plot(Model_ABC_Wireless, which = 4, id.n = 5)
+plot(Model_ABC_Wireless2, which = 4, id.n = 5)
 
 model1_data %>% 
+  top_n(5, .cooksd)
+
+model2_data %>% 
   top_n(5, .cooksd)
 ```
 

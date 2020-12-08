@@ -119,8 +119,8 @@ colMeans(is.na(Churn_Train))
 
 # Removing state and area codes from the dataset
 ```{r}
-Churn_Train<-Churn_Train[,-c(1,3)] 
-#Customers_To_Predict<-Custmers_to_predict[,-c(1,3)]
+# Churn_Train<-Churn_Train[,-c(1,3)] 
+# Customers_To_Predict<-Custmers_to_predict[,-c(1,3)]
 ```
 #### data manipulation
 ```{r}

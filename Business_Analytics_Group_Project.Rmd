@@ -14,6 +14,7 @@ rm(list=ls()) # This code will clear your environment each time you run all.
 #### 1.Import Libraries 
 ```{r, warning = FALSE}
 library(plyr)
+library(tidyverse)
 library(ggplot2)
 library(caret)
 library(party)
@@ -41,6 +42,15 @@ sapply(Churn_Train, function(x) sum(is.na(x))) # NA data
 sapply(Custmers_to_predict, function(x) sum(is.na(x))) # no NA data
 ```
 
+#### impute missing values
+```{r}
+library(mice)
+Churn_Train<- mice(Churn_Train, m=5, maxit = 40)
+
+Churn_Train <- complete(Churn_Train, 5)
+colMeans(is.na(Churn_Train))
+```
+
 ## Exploratory Data Analysis
 
 ```{r}
@@ -50,7 +60,7 @@ boxplot(Churn_Train[, 6:19])
 
 
 ```{r}
-Churn_Train[6:19] %>% 
+Churn_Train[, 6:19] %>% 
   gather(key = Variable, value = Value) %>% 
   ggplot() +
     geom_histogram(aes(x = Value), fill = "steelblue") +
@@ -182,6 +192,33 @@ Model_ABC_Wireless2 <-glm(churn ~ account_length + international_plan + voice_ma
     total_night_minutes:total_night_charge + account_length:international_plan + 
     total_night_calls:total_intl_minutes + total_day_minutes:total_day_charge, family = "binomial", data = Churn_Train)
 summary(Model_ABC_Wireless2)
+```
+
+## Performing Various Tests to Compare Models
+```{r}
+# A test IIA hypothesis (independence of irrelevant alternatives) for a multinomial logit model. Basically the higher the better.
+list(model1 = pR2(Model_ABC_Wireless)["McFadden"], 
+     model3 = pR2(Model_ABC_Wireless2)["McFadden"])
+
+model1_data <- augment(Model_ABC_Wireless) %>% 
+  mutate(index = 1:n())
+
+model2_data <- augment(Model_ABC_Wireless2) %>% 
+  mutate(index = 1:n())
+
+model1_data %>%  
+  filter(abs(.std.resid) > 3) # Used to estimate the influence of a data point when performing a least-squares regression analysis. 
+model2_data %>%  
+  filter(abs(.std.resid) > 3) # Used to estimate the influence of a data point when performing a least-squares regression analysis. 
+
+plot(Model_ABC_Wireless, which = 4, id.n = 5)
+plot(Model_ABC_Wireless2, which = 4, id.n = 5)
+
+model1_data %>% 
+  top_n(5, .cooksd)
+
+model2_data %>% 
+  top_n(5, .cooksd)
 ```
 
 ## Stepwise Search for Optimization of Recall
