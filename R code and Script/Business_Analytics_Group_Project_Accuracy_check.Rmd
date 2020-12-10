@@ -22,7 +22,7 @@ library(rpart.plot)
 
 #### 2.Reading the dataset 
 ```{r}
-Churn_Train <- read.csv("~/Downloads/Churn_Train(1).csv")
+Churn_Train <- read.csv("~/Downloads/Churn_Train.csv")
 
 summary(Churn_Train)
 ```
@@ -31,21 +31,21 @@ summary(Churn_Train)
 sapply(Churn_Train, function(x) sum(is.na(x))) # NA data
 
 ```
-#### removing NA values
-```{r}
-Churn_Train <- na.omit(Churn_Train)
+####  NA values
+```{r echo=FALSE,}
+#### impute missing values
+str(Churn_Train)
+library(mice)
+Churn_Train<- mice(Churn_Train, m=5, maxit = 40)
+Churn_Train <- complete(Churn_Train, 5)
+colMeans(is.na(Churn_Train))
 ```
 
-#Removing state and area codes from the dataset
-```{r}
-Churn_Train<-Churn_Train[,-c(1,3)] 
 
-
-```
 #### data manipulation
-```{r}
-##updating the values of International plan , voice mail plan and churn to 1 or 0
 
+##updating the values of International plan , voice mail plan and churn to 1 or 0
+```{r}
 #for Churn_Train data
 Churn_Train$international_plan<-ifelse(Churn_Train$international_plan=="yes",1,0)
 Churn_Train$voice_mail_plan<- ifelse(Churn_Train$voice_mail_plan=="yes",1,0)
@@ -57,6 +57,8 @@ Churn_Train$churn<- ifelse(Churn_Train$churn=="yes",1,0)
 Churn_Train$international_plan<-as.factor(Churn_Train$international_plan)
 Churn_Train$voice_mail_plan <-as.factor(Churn_Train$voice_mail_plan)
 Churn_Train$churn<- as.factor(Churn_Train$churn)
+Churn_Train$area_code<- as.factor(Churn_Train$area_code) # added because of decision trees
+Churn_Train$state<- as.factor(Churn_Train$state)
 
 summary(Churn_Train)
 str(Churn_Train)
