@@ -238,8 +238,11 @@ str(Churn_Train)
 ```
 
 <<<<<<< HEAD
+<<<<<<< HEAD
 
 =======
+=======
+>>>>>>> 1b62a7b33c87206966f144e4a292185b6e1da422
 Decision trees and logistic regression are two very popular algorithms and can be used to customer churn prediction with strong predictive performance and good comprehensibility. 
 
 Therefore, we will be using  classification model such as a logistic regression and  decision tree model to determine the predictive ability for each model.
@@ -259,6 +262,9 @@ Steps:
 
 
 #### Churn Train data partitioning (60%,40%)
+<<<<<<< HEAD
+>>>>>>> 1b62a7b33c87206966f144e4a292185b6e1da422
+=======
 >>>>>>> 1b62a7b33c87206966f144e4a292185b6e1da422
 ```{r}
 set.seed(2020)
@@ -274,11 +280,20 @@ validation_data<- Churn_Train[-partition,]
 #1. Decision Tree 
 DecisionTree_model <- ctree(churn~ ., train_data[,-1]) #not including state column
 pred_tree <- predict(DecisionTree_model, validation_data)
+<<<<<<< HEAD
+=======
+
+#table
+table(pred_tree)
+>>>>>>> 1b62a7b33c87206966f144e4a292185b6e1da422
 
 #table
 table(pred_tree)
 
+<<<<<<< HEAD
 
+=======
+>>>>>>> 1b62a7b33c87206966f144e4a292185b6e1da422
 #3. Decision Tree with states
 #DecisionTree_model_ws <- ctree(churn~ ., train_data) #not including state column
 #pred_tree_ws <- predict(DecisionTree_model_ws, validation_data)
@@ -356,9 +371,15 @@ print(accuracy2)
 ```
 Result:
 Accuracy of the improvised model using the step() function has better results with Accuracy = 90%.
+<<<<<<< HEAD
 
 #### Lets make a confusion matrix for the logistic regression performed above (with states column /without states column)
 
+=======
+
+#### Lets make a confusion matrix for the logistic regression performed above (with states column /without states column)
+
+>>>>>>> 1b62a7b33c87206966f144e4a292185b6e1da422
 ```{r}
 ## Logistic Regression
 table(validation_data$churn, resultcheck > 0.5)
