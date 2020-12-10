@@ -173,6 +173,7 @@ str(Churn_Train)
 
 ```
 
+
 ```{r}
 # Partioning the dataset into train and validation sets.
 set.seed(15)
