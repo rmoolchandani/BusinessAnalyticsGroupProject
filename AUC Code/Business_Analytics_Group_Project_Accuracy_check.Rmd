@@ -1,0 +1,113 @@
+---
+title: "Business Analytics-Group Project Accuracy check"
+author: "Khushboo Yadav"
+date: "11/24/2020"
+output:
+  pdf_document: default
+  html_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+ Conclusion : As per the result decision tree seems to be more accurate .
+
+#### 1.Import Libraries
+```{r}
+library(plyr)
+library(ggplot2)
+library(caret)
+library(party)
+library(rpart)
+library(rpart.plot)
+```
+
+#### 2.Reading the dataset 
+```{r}
+Churn_Train <- read.csv("Churn_Train(1).csv")
+summary(Churn_Train)
+```
+# analysing count of NA value in the dataset
+```{r}
+sapply(Churn_Train, function(x) sum(is.na(x))) # NA data
+```
+####  NA values
+```{r echo=FALSE,}
+#### impute missing values
+str(Churn_Train)
+library(mice)
+Churn_Train<- mice(Churn_Train, m=5, maxit = 40)
+Churn_Train <- complete(Churn_Train, 5)
+colMeans(is.na(Churn_Train))
+```
+
+
+#### data manipulation
+
+##updating the values of International plan , voice mail plan and churn to 1 or 0
+```{r}
+#for Churn_Train data
+Churn_Train$international_plan<-ifelse(Churn_Train$international_plan=="yes",1,0)
+Churn_Train$voice_mail_plan<- ifelse(Churn_Train$voice_mail_plan=="yes",1,0)
+Churn_Train$churn<- ifelse(Churn_Train$churn=="yes",1,0)
+##Factorization of above data
+#for Churn_Train data
+Churn_Train$international_plan<-as.factor(Churn_Train$international_plan)
+Churn_Train$voice_mail_plan <-as.factor(Churn_Train$voice_mail_plan)
+Churn_Train$churn<- as.factor(Churn_Train$churn)
+Churn_Train$area_code<- as.factor(Churn_Train$area_code) # added because of decision trees
+Churn_Train$state<- as.factor(Churn_Train$state)
+summary(Churn_Train)
+str(Churn_Train)
+```
+
+##Churn Train data partitioning (60%,40%)
+```{r}
+set.seed(2020)
+partition<- createDataPartition(Churn_Train$churn,p=0.6,list=FALSE)
+train_data<- Churn_Train[partition,]
+validation_data<- Churn_Train[-partition,]
+```
+
+# Accuracy for logistic regression 
+```{r}
+Model_Train <- glm(churn ~ .,family=binomial(link="logit"),data=train_data)
+summary(Model_Train)
+predict_validation<-predict(Model_Train,newdata = validation_data,type='response')
+resultcheck<-ifelse(predict_validation>0.5,1,0)
+## Accuracy check
+error<-mean(resultcheck!=validation_data$churn)
+accuracy<-1-error
+print(accuracy)
+#
+table(validation_data$churn, resultcheck > 0.5)
+#confusion matrix
+resultcheck<- as.factor(resultcheck)
+confusionMatrix(resultcheck,validation_data$churn)
+```
+
+# ROC for logistic regression 
+```{r}
+library(pROC)
+#ROC Curve for validation Data set
+roc(validation_data$churn, predict_validation)
+plot.roc(validation_data$churn,predict_validation,col = "red", lwd = 3)
+```
+
+# Accuracy for decision tree
+```{r}
+D_model <- ctree(churn~ ., train_data)
+pred_tree <- predict(D_model, validation_data)
+#table
+table(pred_tree)
+#confusion matrix
+confusionMatrix(pred_tree,validation_data$churn)
+```
+
+# ROC for decision tree
+```{r}
+pred_tree1 <- predict(D_model, validation_data, type='node')
+#ROC Curve for validation Data set
+roc(validation_data$churn, pred_tree1)
+plot.roc(validation_data$churn,pred_tree1,col = "red", lwd = 3)
+```
