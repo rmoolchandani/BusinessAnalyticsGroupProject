@@ -369,19 +369,17 @@ plot.roc(validation_data$churn,predict_validation2,col = "red", lwd = 3)
 #### Let's make a confusion matrix for the logistic regression performed above (with states column /without states column)
 
 ```{r}
-## Logistic Regression
-table(resultcheck > .5, validation_data$churn)
-
 # Logistic Regression Confusion Matrix
 resultcheck<- as.factor(resultcheck)
 confusionMatrix(resultcheck,validation_data$churn)
 
-##Improvised Model
-table(resultcheck2 > 0.5, validation_data$churn)
-
 #Improvised Model Confusion Matrix
 resultcheck2<- as.factor(resultcheck2)
-confusionMatrix(resultcheck2,validation_data$churn)
+confusionMatrix(resultcheck2, validation_data$churn)
+
+# Anova
+anova(Logistic_Model, test="Chisq")
+anova(Logistic_Model2, test="Chisq")
 ```
 Result:
 We can see that the Accuracy  and True positive values has increased as compared to model1, which is an important factor in order to determine  the right model to predict the customers who are likely to churn.
@@ -398,6 +396,12 @@ Model_ABC_Wireless <- ctree(Churn_Train$churn~ ., Churn_Train)
 ## Predicting churn results based on the Decision Tree Model
 predict_validation <- predict(Model_ABC_Wireless, newdata = validation_data, type='response')
 
+# Decision Tree Plots
+DC_Tree <- Model_ABC_Wireless
+dcplot<-rpart(Churn_Train$churn ~.,data=Churn_Train,method='class')
+rpart.plot(dcplot,extra=106)
+plot(DC_Tree, type='simple')
+
 ## Decision Tree Confusion Matrix
 confusionMatrix(predict_validation, validation_data$churn)
 
@@ -405,7 +409,7 @@ confusionMatrix(predict_validation, validation_data$churn)
 confusionMatrix(resultcheck2, validation_data$churn)
 ```
 
-The Decision Tree did a better job of predicting those who would churn (Sensitivity: 98%) and the Improvised Logistic Model had a sensitivity of 97%. Decision tree predicted 45 more people who churned than the improvised logistic model. 
+The Decision Tree did a better job of predicting those who would churn (Specificity: 67%) and the Improvised Logistic Model had a specificity of 44%. Decision tree predicted 45 more people who churned than the improvised logistic model. 
 
 As per the targeted approach the company will be trying  to identify in advance customers who are likely to churn. The
 company then targets those customers with special programs or incentives. Therefore Sensitivity is the top criteria for the model selection.
