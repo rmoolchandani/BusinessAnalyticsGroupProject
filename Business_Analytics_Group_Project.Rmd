@@ -25,29 +25,30 @@ library(party) # for decision tree
 library(ggcorrplot) # for correlations.
 library(stats) # for the stepwise search.
 library(rpart) # for decision tree
-library(rpart.plot) #fro decision tree
+library(rpart.plot) #for decision tree
 
 ```
 
-#### 2. loading and Reading the dataset  
-```{r}
-#setwd("~/Documents/BusinessAnalyticsGroupProject/R code and Script") 
+#### 2. Loading and Reading the Dataset  
+```{r, results=FALSE}
+setwd("~/Documents/BusinessAnalyticsGroupProject/R code and Script") 
 
 
 #Loading the training data to analyze and build model
-Churn_Train <- read.csv("~/Desktop/Churn_Train.csv")
-summary(Churn_Train)
+Churn_Train <- read_csv("Churn_Train.csv")
 
 #Loading the file containing the list of consumers that we need to predict their future churn
-load("~/Downloads/Customers_To_Predict.RData")
+load("Customers_To_Predict.RData")
 
-
+Customers_To_Predict <- Custmers_to_predict
 # removed the "area_code_" part of the string in "area_code" variable.
 Churn_Train$area_code <- as.factor(sub("area_code_", "", Churn_Train$area_code)) 
 Customers_To_Predict$area_code <- as.factor(sub("area_code_", "", Customers_To_Predict$area_code))
 ```
 ####  Analysing Count of the NA Values in the Dataset
 ```{r}
+summary(Churn_Train)
+
 sapply(Churn_Train, function(x) sum(is.na(x))) # NA data
 sapply(Customers_To_Predict, function(x) sum(is.na(x))) # no NA data
 ```
@@ -184,7 +185,6 @@ Interpretation of the correlation chart:
 
 
 
-
 Strong negative correlation between total day minutes and total evening minutes. Meaning that the as the evening minutes increase the total day minutes decrease. Also, a slight negative correlation between the total evening minutes and the total evening charges. 
 
 Looking at the correlation of just the people who churned, some possible interesting information appeared. There is a strong correlation between the totals day charges and the number of Customer Service Calls. The higher the charges the more calls were made. The same was true for customer service calls and total evening charges although less of a relationship compared to day charges. 
@@ -237,12 +237,7 @@ str(Churn_Train)
 
 ```
 
-<<<<<<< HEAD
-<<<<<<< HEAD
-
-=======
-=======
->>>>>>> 1b62a7b33c87206966f144e4a292185b6e1da422
+## Choice of Models:
 Decision trees and logistic regression are two very popular algorithms and can be used to customer churn prediction with strong predictive performance and good comprehensibility. 
 
 Therefore, we will be using  classification model such as a logistic regression and  decision tree model to determine the predictive ability for each model.
@@ -262,10 +257,6 @@ Steps:
 
 
 #### Churn Train data partitioning (60%,40%)
-<<<<<<< HEAD
->>>>>>> 1b62a7b33c87206966f144e4a292185b6e1da422
-=======
->>>>>>> 1b62a7b33c87206966f144e4a292185b6e1da422
 ```{r}
 set.seed(2020)
 partition<- createDataPartition(Churn_Train$churn,p=0.6,list=FALSE)
@@ -280,20 +271,13 @@ validation_data<- Churn_Train[-partition,]
 #1. Decision Tree 
 DecisionTree_model <- ctree(churn~ ., train_data[,-1]) #not including state column
 pred_tree <- predict(DecisionTree_model, validation_data)
-<<<<<<< HEAD
-=======
-
-#table
-table(pred_tree)
->>>>>>> 1b62a7b33c87206966f144e4a292185b6e1da422
 
 #table
 table(pred_tree)
 
-<<<<<<< HEAD
+#table
+table(pred_tree)
 
-=======
->>>>>>> 1b62a7b33c87206966f144e4a292185b6e1da422
 #3. Decision Tree with states
 #DecisionTree_model_ws <- ctree(churn~ ., train_data) #not including state column
 #pred_tree_ws <- predict(DecisionTree_model_ws, validation_data)
@@ -357,6 +341,7 @@ resultcheck2<-ifelse(predict_validation2>0.5,1,0)
 ```
 
 ####  Accuracy check for both logistic regression models
+
 ```{r}
 ##Logistic method
 error<-mean(resultcheck!=validation_data$churn)
@@ -371,15 +356,9 @@ print(accuracy2)
 ```
 Result:
 Accuracy of the improvised model using the step() function has better results with Accuracy = 90%.
-<<<<<<< HEAD
 
-#### Lets make a confusion matrix for the logistic regression performed above (with states column /without states column)
+#### Let's make a confusion matrix for the logistic regression performed above (with states column /without states column)
 
-=======
-
-#### Lets make a confusion matrix for the logistic regression performed above (with states column /without states column)
-
->>>>>>> 1b62a7b33c87206966f144e4a292185b6e1da422
 ```{r}
 ## Logistic Regression
 table(validation_data$churn, resultcheck > 0.5)
@@ -445,7 +424,5 @@ table(Churn_Prob) # 0=900, customer not likely to churn ,1=100 ,customer likely 
 
 #plotting the prediction results :
 plot(Churn_Prob,xlab="1= customer likely to churn ,0= customer will not churn" , ylab="Customers",main="Prediction of customers who are likely to churn",col="orange")
-
-
 ```
 
