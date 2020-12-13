@@ -357,6 +357,18 @@ print(accuracy2)
 Result:
 Accuracy of the improvised model using the step() function has better results with Accuracy = 90%.
 
+# ROC for logistic regression 
+```{r}
+library(pROC)
+#ROC Curve for validation Data set with Logistic Model
+roc(validation_data$churn, predict_validation)
+plot.roc(validation_data$churn,predict_validation,col = "red", lwd = 3)
+
+#ROC Curve for validation Data set with Improvised Logistic Model
+roc(validation_data$churn, predict_validation2)
+plot.roc(validation_data$churn,predict_validation2,col = "red", lwd = 3)
+```
+
 #### Let's make a confusion matrix for the logistic regression performed above (with states column /without states column)
 
 ```{r}
@@ -378,12 +390,28 @@ Result:
 We can see that the Accuracy  and True positive values has increased as compared to model1, which is an important factor in order to determine  the right model to predict the customers who are likely to churn.
 
 
+```{r}
+# I(Mark) kept getting an error when running predict on line 423 saying classes didn't match so line 408 is making the classes match so it will run and include the results in the model performance section of the report. You can # it if you are not having that problem.
+Churn_Train[, c(2,6,8,11,14,17,19)] <- as.integer(unlist(Churn_Train[, c(2,6,8,11,14,17,19)]))
+validation_data[, c(2,6,8,11,14,17,19)] <- as.integer(unlist(validation_data[, c(2,6,8,11,14,17,19)]))
 
+#Building the model on the Churn_Train dataset using ctree()
+Model_ABC_Wireless <- ctree(Churn_Train$churn~ ., Churn_Train)
 
+## Predicting churn results based on the Decision Tree Model
+predict_validation <- predict(Model_ABC_Wireless, newdata = validation_data, type='response')
 
+## Decision Tree Confusion Matrix
+confusionMatrix(validation_data$churn, predict_validation)
+
+# Improvised Logistic Model Confusion Matrix
+confusionMatrix(resultcheck2,validation_data$churn)
+```
+
+The Decision Tree did a better job of predicting those who wouldn't churn (Specificity: 87%) but the Improvised Logistic Model did a better job of predicting who would churn (Sensitivity: 97%). 
 
 As per the targeted approach the company will be trying  to identify in advance customers who are likely to churn. The
-company then targets those customers with special programs or incentives. Therefore Accuracy is the top criteria for the model selection.
+company then targets those customers with special programs or incentives. Therefore Sensitivity is the top criteria for the model selection.
 
 Observation:
 
@@ -404,11 +432,8 @@ Therefore, we would like to choose Decision trees as the best model to predict t
 
 #### Decision Tree
 ```{r}
-#Building the model on the Churn_train dataset using ctree()
-Model_ABC_Wireless <- ctree(Churn_Train$churn~ ., Churn_Train[,-1])
-
 #rpart () used on the decision tree
-dcplot<-rpart(Churn_Train$churn ~.,data=Churn_Train[,-1],method='class')
+dcplot<-rpart(Churn_Train$churn ~.,data=Churn_Train, method='class')
 
 #plotting the decision tree using rpart
 rpart.plot(dcplot,extra=106)
@@ -416,8 +441,9 @@ rpart.plot(dcplot,extra=106)
 # Decision tree plot
 plot(Model_ABC_Wireless, type='simple')
 
-# Predicting the Churn results based on the model
-Churn_Prob <- predict(Model_ABC_Wireless, Customers_To_Predict)
+# Predicting the Churn results for validation based on the model
+Churn_Prob <- predict(Model_ABC_Wireless, validation_data)
+```
 
 #Results of pred_tree
 table(Churn_Prob) # 0=900, customer not likely to churn ,1=100 ,customer likely to churn 
