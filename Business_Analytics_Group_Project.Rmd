@@ -214,12 +214,9 @@ Most of the people seem to churn between 75 to 125 calls per day, making 1 to 5 
 
 Based on the above, I might suggest that the reason people are churning is that the cost of daily phone call charges during the day are too much. FYI I think this data is really old as I remember when Cell Phone companies used to charge more for calls made during the day than the evening... 
 
-
-
 # Data Pre-Processing
 ```{r}
 ## 1.Updating the values of churn to 1 or 0
-
 Churn_Train$churn<- ifelse(Churn_Train$churn=="yes",1,0)
 
 
@@ -430,25 +427,13 @@ Therefore, we would like to choose Decision trees as the best model to predict t
 #### Implementing model based on the above result:
 
 
-#### Decision Tree
+#### Improvised Logistic Regression Model on Customer_to_Predict Data Set
 ```{r}
-#rpart () used on the decision tree
-dcplot<-rpart(Churn_Train$churn ~.,data=Churn_Train, method='class')
-
-#plotting the decision tree using rpart
-rpart.plot(dcplot,extra=106)
-
-# Decision tree plot
-plot(Model_ABC_Wireless, type='simple')
-
-# Predicting the Churn results for validation based on the model
-Churn_Prob <- predict(Model_ABC_Wireless, validation_data)
-```
-
-#Results of pred_tree
-table(Churn_Prob) # 0=900, customer not likely to churn ,1=100 ,customer likely to churn 
+## Predicting churn results based on the Decision Tree Model
+predict_validation <- predict(Logistic_Model2, newdata = Customers_To_Predict, type='response')
+resultcheck<-ifelse(predict_validation>0.5,1,0)
+table(resultcheck)
 
 #plotting the prediction results :
-plot(Churn_Prob,xlab="1= customer likely to churn ,0= customer will not churn" , ylab="Customers",main="Prediction of customers who are likely to churn",col="orange")
+hist(resultcheck, xlab="Customer Churn" , ylab="Customers", main="62 Customers Will Churn" ,col="orange")
 ```
-
