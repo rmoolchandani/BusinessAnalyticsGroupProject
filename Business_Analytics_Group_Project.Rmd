@@ -370,16 +370,16 @@ plot.roc(validation_data$churn,predict_validation2,col = "red", lwd = 3)
 
 ```{r}
 ## Logistic Regression
-table(validation_data$churn, resultcheck > 0.5)
+table(resultcheck > .5, validation_data$churn)
 
-#confusion matrix
+# Logistic Regression Confusion Matrix
 resultcheck<- as.factor(resultcheck)
 confusionMatrix(resultcheck,validation_data$churn)
 
-##Improvised model
-table(validation_data$churn, resultcheck2 > 0.5)
+##Improvised Model
+table(resultcheck2 > 0.5, validation_data$churn)
 
-#confusion matrix
+#Improvised Model Confusion Matrix
 resultcheck2<- as.factor(resultcheck2)
 confusionMatrix(resultcheck2,validation_data$churn)
 ```
@@ -399,13 +399,13 @@ Model_ABC_Wireless <- ctree(Churn_Train$churn~ ., Churn_Train)
 predict_validation <- predict(Model_ABC_Wireless, newdata = validation_data, type='response')
 
 ## Decision Tree Confusion Matrix
-confusionMatrix(validation_data$churn, predict_validation)
+confusionMatrix(predict_validation, validation_data$churn)
 
 # Improvised Logistic Model Confusion Matrix
-confusionMatrix(resultcheck2,validation_data$churn)
+confusionMatrix(resultcheck2, validation_data$churn)
 ```
 
-The Decision Tree did a better job of predicting those who wouldn't churn (Specificity: 87%) but the Improvised Logistic Model did a better job of predicting who would churn (Sensitivity: 97%). 
+The Decision Tree did a better job of predicting those who would churn (Sensitivity: 98%) and the Improvised Logistic Model had a sensitivity of 97%. Decision tree predicted 45 more people who churned than the improvised logistic model. 
 
 As per the targeted approach the company will be trying  to identify in advance customers who are likely to churn. The
 company then targets those customers with special programs or incentives. Therefore Sensitivity is the top criteria for the model selection.
@@ -426,14 +426,19 @@ Therefore, we would like to choose Decision trees as the best model to predict t
 
 #### Implementing model based on the above result:
 
-
 #### Improvised Logistic Regression Model on Customer_to_Predict Data Set
-```{r}
+```{r, warning = FALSE}
 ## Predicting churn results based on the Decision Tree Model
-predict_validation <- predict(Logistic_Model2, newdata = Customers_To_Predict, type='response')
-resultcheck<-ifelse(predict_validation>0.5,1,0)
-table(resultcheck)
+predict_validation <- predict(Model_ABC_Wireless, newdata = Customers_To_Predict, type='response')
+table(predict_validation)
+
+predict_validation <- as.data.frame(predict_validation)
 
 #plotting the prediction results :
-hist(resultcheck, xlab="Customer Churn" , ylab="Customers", main="62 Customers Will Churn" ,col="orange")
+predict_validation %>% 
+  ggplot(aes(x = `predict_validation`)) +
+  geom_histogram(stat = "count", fill = "orange") +
+  labs(x = "Customer Churn Or Not", y = "# of Customers")+
+  ggtitle("75 Customers will Churn") +
+  theme(plot.title = element_text(hjust =.5, size = 16, face = c("bold", "italic")))
 ```
